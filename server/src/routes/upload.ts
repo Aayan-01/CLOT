@@ -4,6 +4,8 @@ import { processImages } from '../utils/imageProcessor';
 import { analyzeImages, computeAuthenticityWithAI, estimatePriceWithAI } from '../services/gemini';
 import { saveSession } from '../utils/sessionStore';
 import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import { createThumbnailUrl } from '../utils/uploadUtil';
 import { AnalysisResult } from '../types';
 
 const router = express.Router();
@@ -232,7 +234,8 @@ router.post('/analyze', uploadMiddleware, async (req, res) => {
       detailedFeatures: Object.keys(detailedFeatures).length > 0 ? detailedFeatures : undefined,
       additionalObservations: Object.keys(additionalObservations).length > 0 ? additionalObservations : undefined,
       // listing removed — Suggested listing section is intentionally not provided
-      thumbnails: thumbnails.map(t => `/uploads/${t.split('/').pop()}`),
+      // Return absolute thumbnail URLs using the request origin so clients always get playable image URLs
+      thumbnails: thumbnails.map(t => createThumbnailUrl(req, t)),
       warnings: [
         'This is an automated AI estimate – not a legal authenticity certificate.',
         'For high-value items, consult a professional authenticator.',

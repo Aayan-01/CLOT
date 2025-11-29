@@ -46,6 +46,11 @@ Complete breakdown of every file and folder in the Cloth Authenticator project.
 - **`ResultsPage.tsx`** - Displays comprehensive analysis results with enhanced UI
   - **UPDATED**: Major UI overhaul with new sections:
     - Brand Identification & Authentication with verdict badges (AUTHENTIC/LIKELY AUTHENTIC/QUESTIONABLE/COUNTERFEIT)
+    - Verdict badges and authenticity visuals are colour coded in the UI:
+      - AUTHENTIC → green (positive)
+      - LIKELY AUTHENTIC → green (confirmatory)
+      - QUESTIONABLE → amber / warning
+      - COUNTERFEIT → red (negative)
     - Authenticity markers and red flags display
     - Dual pricing structure (original retail price + current market value)
     - Rarity classification with color-coded badges (Common/Uncommon/Rare/Epic/Legendary/Mythic)

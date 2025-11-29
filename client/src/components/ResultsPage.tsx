@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { AnalysisResult } from '../types';
-import ChatBox from './ChatBox';
+import React, { useState } from "react";
+import { AnalysisResult } from "../types";
+import Chatbot from "./Chatbot";
 
 interface ResultsPageProps {
   result: AnalysisResult;
@@ -15,468 +15,394 @@ const ResultsPage: React.FC<ResultsPageProps> = ({
 }) => {
   const [showChat, setShowChat] = useState(false);
 
-  // Remove markdown formatting from text and strip headings, code fences and list markers
-  const stripMarkdown = (text: string = ''): string => {
-    return text
-      .replace(/```[\s\S]*?```/g, '') // remove fenced code blocks
-      .replace(/`([^`]*)`/g, '$1') // inline code
-      .replace(/^#{1,6}\s*/gm, '') // remove markdown header markers
-      .replace(/^[-*+]\s*/gm, '') // remove leading list markers
-      .replace(/\*\*(.+?)\*\*/g, '$1') // Remove bold
-      .replace(/\*(.+?)\*/g, '$1')     // Remove italic
-      .replace(/\[(.+?)\]\(.+?\)/g, '$1') // Remove links
+  const stripMarkdown = (text: string = "") =>
+    text
+      .replace(/```[\s\S]*?```/g, "")
+      .replace(/`([^`]*)`/g, "$1")
+      .replace(/^#{1,6}\s*/gm, "")
+      .replace(/^[-*+]\s*/gm, "")
+      .replace(/\*\*(.+?)\*\*/g, "$1")
+      .replace(/\*(.+?)\*/g, "$1")
+      .replace(/\[(.+?)\]\(.+?\)/g, "$1")
       .trim();
-  };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-400';
-    if (score >= 60) return 'text-yellow-400';
-    return 'text-red-400';
-  };
-
-  const getScoreBg = (score: number) => {
-    if (score >= 80) return 'bg-green-500';
-    if (score >= 60) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
+  const badge = (text: string, className = "") => (
+    <span
+      className={`px-3 py-1.5 rounded-full text-sm font-medium border ${className}`}
+    >
+      {text}
+    </span>
+  );
 
   const getRarityColor = (rarity?: string) => {
     switch (rarity) {
-      case 'common': return 'bg-gray-500 text-gray-100';
-      case 'uncommon': return 'bg-green-500 text-white';
-      case 'rare': return 'bg-blue-500 text-white';
-      case 'epic': return 'bg-purple-500 text-white';
-      case 'legendary': return 'bg-orange-500 text-white';
-      case 'mythic': return 'bg-red-500 text-white';
-      default: return 'bg-gray-500 text-gray-100';
+      case "common":
+        return "bg-gray-500 text-gray-100";
+      case "uncommon":
+        return "bg-green-500 text-white";
+      case "rare":
+        return "bg-blue-500 text-white";
+      case "epic":
+        return "bg-purple-500 text-white";
+      case "legendary":
+        return "bg-orange-500 text-white";
+      case "mythic":
+        return "bg-red-500 text-white";
+      default:
+        return "bg-gray-500 text-gray-100";
     }
   };
 
-  const getVerdictBadge = (verdict?: string) => {
-    switch (verdict) {
-      case 'AUTHENTIC': return 'bg-green-500/20 text-green-300 border-green-500/50';
-      case 'LIKELY AUTHENTIC': return 'bg-blue-500/20 text-blue-300 border-blue-500/50';
-      case 'QUESTIONABLE': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50';
-      case 'COUNTERFEIT': return 'bg-red-500/20 text-red-300 border-red-500/50';
-      default: return 'bg-gray-500/20 text-gray-300 border-gray-500/50';
+  const getVerdictStyles = (verdict?: string) => {
+    // Normalize common verdict strings coming from server
+    const v = (verdict || "").toUpperCase().trim();
+
+    switch (v) {
+      case "AUTHENTIC":
+        return {
+          bar: "bg-emerald-600",
+          scoreText: "text-emerald-700",
+          badge: "bg-emerald-100 text-emerald-800 border-emerald-200",
+        };
+      case "LIKELY AUTHENTIC":
+        return {
+          bar: "bg-green-500",
+          scoreText: "text-green-700",
+          badge: "bg-green-100 text-green-800 border-green-200",
+        };
+      case "QUESTIONABLE":
+        return {
+          bar: "bg-amber-400",
+          scoreText: "text-amber-700",
+          badge: "bg-amber-100 text-amber-900 border-amber-200",
+        };
+      case "COUNTERFEIT":
+        return {
+          bar: "bg-red-600",
+          scoreText: "text-red-700",
+          badge: "bg-red-100 text-red-800 border-red-200",
+        };
+      default:
+        return {
+          bar: "bg-black",
+          scoreText: "text-gray-900",
+          badge: "bg-gray-100 text-gray-800 border-gray-200",
+        };
     }
   };
 
-  // Helper to extract platform names from sentences
-  const extractPlatformNames = (platforms: string[]): string[] => {
-    const knownPlatforms = [
-      'Grailed', 'Depop', 'eBay', 'Poshmark', 'Vinted', 'Vestiaire Collective',
-      'The RealReal', 'StockX', 'GOAT', 'Stadium Goods', 'Mercari', 'Etsy',
-      'Facebook Marketplace', 'Instagram', 'Craigslist'
-    ];
-    
-    const extracted: string[] = [];
-    
-    platforms.forEach(platform => {
-      // Check if the platform string is already a short name
-      if (platform.length < 30 && !platform.includes(' ')) {
-        extracted.push(platform);
-        return;
-      }
-      
-      // Try to extract known platform names from sentences
-      knownPlatforms.forEach(known => {
-        if (platform.toLowerCase().includes(known.toLowerCase())) {
-          if (!extracted.includes(known)) {
-            extracted.push(known);
-          }
-        }
-      });
-      
-      // If no known platform found and it's a sentence, just take first few words
-      if (extracted.length === 0) {
-        const words = platform.split(' ');
-        if (words.length > 3) {
-          extracted.push(words.slice(0, 3).join(' ') + '...');
-        } else {
-          extracted.push(platform);
-        }
-      }
-    });
-    
-    return extracted.length > 0 ? extracted : platforms;
+  const resolveThumbnailSrc = (src: string) => {
+    if (!src) return src;
+
+    // Normalize backslashes (Windows paths) to forward slashes so checks are reliable
+    const normalized = src.replace(/\\/g, '/');
+
+    // If the server sent a relative uploads path (with or without leading slash),
+    // prepend the API origin so the browser can fetch it correctly.
+    if (normalized.startsWith('/uploads') || normalized.startsWith('uploads')) {
+      const apiOrigin = (import.meta as any).env?.VITE_API_ORIGIN ?? 'http://localhost:4000';
+      return `${apiOrigin}${normalized.startsWith('/') ? normalized : '/' + normalized}`;
+    }
+
+    // Already an absolute URL – return as-is
+    return src;
   };
+
+  const authenticityStyles = getVerdictStyles(result.authenticity?.verdict);
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gray-900">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-            Analysis Results
-          </h1>
+    <div className="min-h-screen w-full bg-[#f8fafc] relative">
+      {/* GRID BG */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, #e2e8f0 1px, transparent 1px),
+            linear-gradient(to bottom, #e2e8f0 1px, transparent 1px)
+          `,
+          backgroundSize: "20px 30px",
+          WebkitMaskImage:
+            "radial-gradient(ellipse 70% 60% at 50% 100%, #000 60%, transparent 100%)",
+        }}
+      />
+
+      <div className="relative z-10 max-w-4xl mx-auto p-6 md:p-10">
+        {/* HEADER */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900">Analysis Results</h1>
+          <p className="text-gray-600 mt-2">
+            Here’s your detailed authenticity & pricing report.
+          </p>
+
           <button
             onClick={onReset}
-            className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+            className="mt-6 px-6 py-2 bg-black text-white rounded-full hover:bg-gray-900 transition"
           >
             New Analysis
           </button>
         </div>
 
-        {/* Image Gallery */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {result.thumbnails.map((thumb, idx) => (
-            <img
-              key={idx}
-              src={thumb}
-              alt={`Item ${idx + 1}`}
-              className="w-full h-64 object-cover rounded-xl border border-gray-700 shadow-lg"
-            />
-          ))}
-        </div>
-
-        {/* Pro tip (hint) for missing images */}
-        {result.needs_more_images && (
-          <div className="bg-gray-700/10 border border-gray-700/20 rounded-xl p-6 mb-8">
-            <p className="text-sm text-gray-300 italic flex items-center gap-2">
-              <span className="text-lg">💡</span>
-              (pro tip :- Please upload photos of <strong>neck tags, care labels, and close-up stitching</strong> for more accurate authentication. )
-            </p>
+        {/* CARD */}
+        <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-200 space-y-10">
+          {/* IMAGES */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {result.thumbnails.map((src, i) => (
+              <img
+                key={i}
+                src={resolveThumbnailSrc(src)}
+                alt={`thumbnail ${i + 1}`}
+                loading="lazy"
+                className="rounded-xl border object-cover w-full h-48"
+              />
+            ))}
           </div>
-        )}
 
-        {/* Brand Identification & Authentication */}
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6 shadow-lg">
-          <h2 className="text-2xl font-bold mb-4 flex items-center">
-            <span className="text-3xl mr-3">🔍</span>
-            Brand Identification & Authentication
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Authenticity Score */}
-            <div>
-              <div className="flex items-center mb-4">
-                <div className={`text-5xl font-bold mr-4 ${getScoreColor(result.authenticity.score)}`}>
+          {/* HINT */}
+          {result.needs_more_images && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800">
+              <strong>Pro tip:</strong> Upload clear shots of tags, stitching &
+              details for even more accurate authentication.
+            </div>
+          )}
+
+          {/* BRAND (moved above authenticity) */}
+          <section>
+            <h2 className="text-2xl font-semibold mb-4 text-gray-900">
+              Brand Identification
+            </h2>
+
+            <p className="text-xl font-bold text-gray-900">{result.brand.name}</p>
+            <p className="text-gray-600 text-sm mb-2">Confidence: {result.brand.confidence}%</p>
+
+            {result.rarity && (
+              <div className="mt-2">
+                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getRarityColor(result.rarity)}`}>
+                  {result.rarity}
+                </span>
+              </div>
+            )}
+          </section>
+
+          {/* AUTHENTICITY */}
+          <section>
+            <h2 className="text-2xl font-semibold mb-4 text-gray-900">
+              Authenticity Report
+            </h2>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-6">
+                <div className={`text-5xl font-bold ${authenticityStyles.scoreText}`}>
                   {result.authenticity.score}
                 </div>
+
                 <div className="flex-1">
-                  <div className="w-full bg-gray-700 rounded-full h-4 mb-2">
+                  <div className="h-3 bg-gray-200 rounded-full" role="progressbar" aria-label="Authenticity score" aria-valuemin={0} aria-valuemax={100} aria-valuenow={result.authenticity.score}>
                     <div
-                      className={`h-4 rounded-full ${getScoreBg(result.authenticity.score)}`}
-                      style={{ width: `${result.authenticity.score}%` }}
-                    />
+                      className={`h-3 rounded-full transition-all ${authenticityStyles.bar}`}
+                      style={{ width: `${Math.max(0, Math.min(100, result.authenticity.score))}%` }}
+                    ></div>
                   </div>
-                  <p className="text-sm text-gray-400">
-                    Confidence: {result.authenticity.confidence}%
+
+                  <p className="text-gray-500 text-sm mt-1">
+                    Confidence {result.authenticity.confidence}%
                   </p>
                 </div>
               </div>
-              
+
+              {/* Verdict badge */}
               {result.authenticity.verdict && (
-                <div className={`inline-block px-4 py-2 rounded-lg border mb-4 ${getVerdictBadge(result.authenticity.verdict)}`}>
-                  <span className="font-bold">{result.authenticity.verdict}</span>
-                </div>
+                <span className={`inline-block mt-3 px-4 py-2 rounded-full border font-medium ${authenticityStyles.badge}`}>
+                  {result.authenticity.verdict}
+                </span>
               )}
             </div>
 
-            {/* Brand Info - FIXED: Show brand name instead of "Identification" */}
-            <div>
-              <p className="text-gray-400 text-sm mb-1">Detected Brand</p>
-              <p className="text-2xl font-bold mb-2">{result.brand.name}</p>
-              <p className="text-sm text-gray-400 mb-4">
-                Confidence: {result.brand.confidence}%
-              </p>
-              
-              {result.rarity && (
+            {/* Markers & Flags */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {(result.authenticity.authenticityMarkers?.length ?? 0) > 0 && (
                 <div>
-                  <p className="text-gray-400 text-sm mb-2">Rarity Classification</p>
-                  <span className={`inline-block px-4 py-2 rounded-lg font-bold uppercase text-sm ${getRarityColor(result.rarity)}`}>
-                    {result.rarity}
-                  </span>
+                  <h3 className="font-semibold text-gray-800 mb-2">
+                    Positive Indicators
+                  </h3>
+                  <ul className="space-y-1 text-sm text-gray-600">
+                    {result.authenticity.authenticityMarkers?.map((m) => (
+                      <li key={m}>• {stripMarkdown(m)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {(result.authenticity.redFlags?.length ?? 0) > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-2">
+                    Red Flags
+                  </h3>
+                  <ul className="space-y-1 text-sm text-gray-600">
+                    {result.authenticity.redFlags?.map((f) => (
+                      <li key={f}>• {stripMarkdown(f)}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Authentication Details */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Positive Indicators */}
-            {result.authenticity.authenticityMarkers && result.authenticity.authenticityMarkers.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold text-green-400 mb-2">✓ Authenticity Markers</h3>
-                <ul className="space-y-1">
-                  {result.authenticity.authenticityMarkers.map((marker, idx) => (
-                    <li key={idx} className="text-sm text-gray-300 flex items-start">
-                      <span className="text-green-400 mr-2 mt-0.5">•</span>
-                      <span>{stripMarkdown(marker)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Red Flags */}
-            {result.authenticity.redFlags && result.authenticity.redFlags.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold text-red-400 mb-2">⚠ Red Flags</h3>
-                <ul className="space-y-1">
-                  {result.authenticity.redFlags.map((flag, idx) => (
-                    <li key={idx} className="text-sm text-gray-300 flex items-start">
-                      <span className="text-red-400 mr-2 mt-0.5">•</span>
-                      <span>{stripMarkdown(flag)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          {/* Key Observations */}
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-2">Key Observations</h3>
-            <div className="space-y-2">
-              {result.authenticity.explanation.map((exp, idx) => (
-                <div key={idx} className="flex items-start">
-                  <span className="text-blue-400 mr-2 mt-0.5">•</span>
-                  <p className="text-gray-300 text-sm">{stripMarkdown(exp)}</p>
-                </div>
+            {/* Explanation */}
+            <div className="mt-6 space-y-2">
+              <h3 className="font-semibold text-gray-800">Key Observations</h3>
+              {result.authenticity.explanation.map((exp, i) => (
+                <p key={i} className="text-gray-600 text-sm">
+                  • {stripMarkdown(exp)}
+                </p>
               ))}
             </div>
-          </div>
-        </div>
+          </section>
 
-        {/* Pricing Estimation */}
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6 shadow-lg">
-          <h2 className="text-2xl font-bold mb-4 flex items-center">
-            <span className="text-3xl mr-3">💰</span>
-            Pricing Estimation
-          </h2>
+          
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Original Retail Price */}
+          {/* PRICING */}
+          <section>
+            <h2 className="text-2xl font-semibold mb-4 text-gray-900">
+              Pricing Estimate
+            </h2>
+
+            {/* Retail */}
             {result.priceEstimate.retail_price && (
-              <div className="bg-gray-700/50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold mb-3 text-purple-400">Original Retail Price</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">INR:</span>
-                    <span className="text-2xl font-bold text-white">
-                      ₹{result.priceEstimate.retail_price.inr.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">USD:</span>
-                    <span className="text-2xl font-bold text-white">
-                      ${result.priceEstimate.retail_price.usd.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
+              <div className="p-4 border rounded-xl bg-gray-50">
+                <h3 className="font-medium text-gray-800 mb-2">
+                  Original Retail
+                </h3>
+
+                <p className="text-gray-900 font-semibold text-lg">
+                  ₹{result.priceEstimate.retail_price.inr.toLocaleString()}
+                </p>
               </div>
             )}
 
-            {/* Current Market Price */}
-            <div className="bg-gray-700/50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-3 text-green-400">Current Market Value</h3>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-gray-400 text-sm mb-1">India (INR)</p>
-                  <div className="flex justify-between text-base">
-                    <span className="text-gray-300">₹{result.priceEstimate.current_market_price.inr.low.toLocaleString()}</span>
-                    <span className="font-bold text-green-400 text-xl">
-                      ₹{result.priceEstimate.current_market_price.inr.median.toLocaleString()}
-                    </span>
-                    <span className="text-gray-300">₹{result.priceEstimate.current_market_price.inr.high.toLocaleString()}</span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm mb-1">USA (USD)</p>
-                  <div className="flex justify-between text-base">
-                    <span className="text-gray-300">${result.priceEstimate.current_market_price.usd.low}</span>
-                    <span className="font-bold text-green-400 text-xl">
-                      ${result.priceEstimate.current_market_price.usd.median}
-                    </span>
-                    <span className="text-gray-300">${result.priceEstimate.current_market_price.usd.high}</span>
-                  </div>
-                </div>
-              </div>
+            {/* Current market */}
+            <div className="mt-4 p-4 border rounded-xl bg-gray-50">
+              <h3 className="font-medium text-gray-800 mb-2">
+                Current Market Value
+              </h3>
+
+              <p className="flex justify-between text-gray-700 text-sm">
+                <span>Low:</span>
+                <span>
+                  ₹{result.priceEstimate.current_market_price.inr.low}
+                </span>
+              </p>
+              <p className="flex justify-between text-lg font-bold text-black">
+                <span>Median:</span>
+                <span>
+                  ₹{result.priceEstimate.current_market_price.inr.median}
+                </span>
+              </p>
+              <p className="flex justify-between text-gray-700 text-sm">
+                <span>High:</span>
+                <span>
+                  ₹{result.priceEstimate.current_market_price.inr.high}
+                </span>
+              </p>
             </div>
-          </div>
+          </section>
 
-          {/* Pricing Insights */}
-          <div className="mt-6 space-y-3">
-            {result.priceEstimate.reasoning && (
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Price Factors:</p>
-                <p className="text-gray-300">{stripMarkdown(result.priceEstimate.reasoning)}</p>
-              </div>
-            )}
-            {result.priceEstimate.marketInsights && (
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Market Insights:</p>
-                <p className="text-gray-300">{stripMarkdown(result.priceEstimate.marketInsights)}</p>
-              </div>
-            )}
-            <p className="text-sm text-gray-400">
-              Estimate confidence: {result.priceEstimate.confidence}%
-            </p>
-          </div>
-        </div>
-
-        {/* Era & Dating + Condition */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Era & Dating - FIXED: Strip markdown */}
-          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
-            <h2 className="text-2xl font-bold mb-4 flex items-center">
-              <span className="text-3xl mr-3">📅</span>
+          {/* ERA */}
+          <section>
+            <h2 className="text-2xl font-semibold mb-4 text-gray-900">
               Era & Dating
             </h2>
-            <p className="text-xl font-semibold text-purple-400 mb-2">
+
+            <p className="text-xl text-gray-900 font-semibold">
               {stripMarkdown(result.era.classification)}
             </p>
-            {result.era.decade && (
-              <p className="text-lg text-blue-400 mb-3">Decade: {result.era.decade}</p>
-            )}
-            <p className="text-gray-300 text-sm leading-relaxed">{stripMarkdown(result.era.rationale)}</p>
-          </div>
 
-          {/* Condition */}
-          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
-            <h2 className="text-2xl font-bold mb-4 flex items-center">
-              <span className="text-3xl mr-3">⭐</span>
+            {result.era.decade && (
+              <p className="text-gray-600">Decade: {result.era.decade}</p>
+            )}
+
+            <p className="text-gray-600 text-sm mt-2">
+              {stripMarkdown(result.era.rationale)}
+            </p>
+          </section>
+
+          {/* CONDITION */}
+          <section>
+            <h2 className="text-2xl font-semibold mb-4 text-gray-900">
               Condition
             </h2>
-            <div className="flex items-center mb-3">
-              <span className="text-3xl font-bold text-blue-400 mr-3">
-                {result.condition.score}/5
-              </span>
-              <span className="text-xl text-gray-300">{stripMarkdown(result.condition.description)}</span>
-            </div>
+
+            <p className="text-xl font-bold text-gray-900">
+              {result.condition.score}/5
+            </p>
+
+            <p className="text-gray-600 text-sm mb-2">
+              {stripMarkdown(result.condition.description)}
+            </p>
+
             <div className="flex flex-wrap gap-2">
-              {result.condition.tags.map((tag, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm"
-                >
-                  {tag}
-                </span>
+              {result.condition.tags.map((t) =>
+                badge(t, "bg-gray-100 border-gray-300 text-gray-700")
+              )}
+            </div>
+          </section>
+
+          {/* FEATURES */}
+          {result.detailedFeatures && (
+            <section>
+              <h2 className="text-2xl font-semibold mb-4 text-gray-900">
+                Detailed Features
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(result.detailedFeatures).map(([k, v], i) =>
+                  v ? (
+                    <div key={i}>
+                      <p className="text-gray-500 text-sm">{k}</p>
+                      <p className="font-medium text-gray-900">
+                        {stripMarkdown(v as string)}
+                      </p>
+                    </div>
+                  ) : null
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* WARNINGS */}
+          {result.warnings.length > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm">
+              <h3 className="font-semibold text-gray-900 mb-2">
+                Important Notes
+              </h3>
+
+              {result.warnings.map((w, i) => (
+                <p key={i} className="text-yellow-800">
+                  • {w}
+                </p>
               ))}
             </div>
-          </div>
+          )}
+
+          {/* CHAT */}
+          <section className="pt-2">
+            <button
+              onClick={() => setShowChat(!showChat)}
+              className="w-full flex justify-between items-center py-3 px-4 border rounded-xl hover:bg-gray-50 transition"
+            >
+              <h2 className="font-semibold text-gray-900">
+                Continue Chat About This Item
+              </h2>
+              <span className="text-xl">{showChat ? "▼" : "▶"}</span>
+            </button>
+
+            {showChat && (
+              <div className="mt-4 border rounded-xl p-4">
+                <Chatbot sessionId={sessionId} />
+              </div>
+            )}
+          </section>
         </div>
 
-        {/* Detailed Features - FIXED: Strip markdown */}
-        {result.detailedFeatures && (
-          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6 shadow-lg">
-            <h2 className="text-2xl font-bold mb-4 flex items-center">
-              <span className="text-3xl mr-3">🔬</span>
-              Detailed Features
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {result.detailedFeatures.material && (
-                <div>
-                  <p className="text-gray-400 text-sm">Material</p>
-                  <p className="text-gray-200 font-semibold">{stripMarkdown(result.detailedFeatures.material)}</p>
-                </div>
-              )}
-              {result.detailedFeatures.color && (
-                <div>
-                  <p className="text-gray-400 text-sm">Color</p>
-                  <p className="text-gray-200 font-semibold">{stripMarkdown(result.detailedFeatures.color)}</p>
-                </div>
-              )}
-              {result.detailedFeatures.pattern && (
-                <div>
-                  <p className="text-gray-400 text-sm">Pattern</p>
-                  <p className="text-gray-200 font-semibold">{stripMarkdown(result.detailedFeatures.pattern)}</p>
-                </div>
-              )}
-              {result.detailedFeatures.size && (
-                <div>
-                  <p className="text-gray-400 text-sm">Size</p>
-                  <p className="text-gray-200 font-semibold">{stripMarkdown(result.detailedFeatures.size)}</p>
-                </div>
-              )}
-              {result.detailedFeatures.countryOfManufacture && (
-                <div>
-                  <p className="text-gray-400 text-sm">Made In</p>
-                  <p className="text-gray-200 font-semibold">{stripMarkdown(result.detailedFeatures.countryOfManufacture)}</p>
-                </div>
-              )}
-              {result.detailedFeatures.careInstructions && (
-                <div className="md:col-span-2 lg:col-span-3">
-                  <p className="text-gray-400 text-sm">Care Instructions</p>
-                  <p className="text-gray-200">{stripMarkdown(result.detailedFeatures.careInstructions)}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Additional Observations - FIXED: Remove subheadings for Styling and Comparable Items */}
-        {result.additionalObservations && (
-          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6 shadow-lg">
-            <h2 className="text-2xl font-bold mb-4 flex items-center">
-              <span className="text-3xl mr-3">💡</span>
-              Additional Observations
-            </h2>
-            
-            <div className="space-y-6">
-              {result.additionalObservations.investmentPotential && (
-                <div>
-                  <h3 className="text-lg font-semibold text-green-400 mb-2">Investment Potential</h3>
-                  <p className="text-gray-300 leading-relaxed">{stripMarkdown(result.additionalObservations.investmentPotential)}</p>
-                </div>
-              )}
-
-              {/* Styling suggestions and comparable items removed per product requirements */}
-
-              {result.additionalObservations.resalePlatforms && result.additionalObservations.resalePlatforms.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-yellow-400 mb-2">Best Resale Platforms</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {extractPlatformNames(result.additionalObservations.resalePlatforms).map((platform, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1.5 bg-yellow-500/20 text-yellow-300 rounded-full text-sm font-medium"
-                      >
-                        {platform}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {result.additionalObservations.culturalSignificance && (
-                <div>
-                  <h3 className="text-lg font-semibold text-orange-400 mb-2">Cultural Significance</h3>
-                  <p className="text-gray-300 leading-relaxed">{stripMarkdown(result.additionalObservations.culturalSignificance)}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* REMOVED: Suggested Listing section completely removed */}
-
-        {/* Warnings */}
-        {result.warnings.length > 0 && (
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6 mb-8">
-            <h3 className="text-xl font-bold text-yellow-200 mb-3">
-              ⚠️ Important Notes
-            </h3>
-            {result.warnings.map((warning, idx) => (
-              <p key={idx} className="text-yellow-200 text-sm mb-2">
-                • {warning}
-              </p>
-            ))}
-          </div>
-        )}
-
-        {/* Chat Section */}
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
-          <button
-            onClick={() => setShowChat(!showChat)}
-            className="w-full flex justify-between items-center mb-4 hover:text-blue-400 transition-colors"
-          >
-            <h2 className="text-2xl font-bold">Continue Chat About This Item</h2>
-            <span className="text-2xl">{showChat ? '▼' : '▶'}</span>
-          </button>
-          {showChat && <ChatBox sessionId={sessionId} />}
-        </div>
+        <div className="h-16"></div>
       </div>
     </div>
   );
