@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Nike",
+    "keywords": ["swoosh", "just do it", "nike air", "jumpman"],
+    "logoPatterns": ["swoosh", "nike", "air jordan"],
+    "priceMultiplier": 2.5
+  },
+  {
+    "name": "Levi's",
+    "keywords": ["red tab", "arcuate", "501", "denim"],
+    "logoPatterns": ["levi's", "levis", "red tab"],
+    "priceMultiplier": 2.0
+  },
+  {
+    "name": "The North Face",
+    "keywords": ["tnf", "half dome", "mountain", "outdoor"],
+    "logoPatterns": ["north face", "tnf", "half dome"],
+    "priceMultiplier": 3.0
+  },
+  {
+    "name": "Supreme",
+    "keywords": ["box logo", "bogo", "streetwear"],
+    "logoPatterns": ["supreme", "box logo"],
+    "priceMultiplier": 5.0
+  },
+  {
+    "name": "Zara",
+    "keywords": ["fast fashion", "contemporary"],
+    "logoPatterns": ["zara"],
+    "priceMultiplier": 1.2
+  },
+  {
+    "name": "Gucci",
+    "keywords": ["gg", "luxury", "double g", "italian"],
+    "logoPatterns": ["gucci", "gg logo", "double g"],
+    "priceMultiplier": 8.0
+  }
+]
