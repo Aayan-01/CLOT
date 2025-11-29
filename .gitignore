@@ -20,6 +20,10 @@ logs/
 *.log
 npm-debug.log*
 
+# Server-side uploaded files — don't track these in git
+server/uploads/
+
+
 # OS files
 .DS_Store
 Thumbs.db
