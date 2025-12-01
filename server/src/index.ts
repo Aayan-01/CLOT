@@ -11,10 +11,11 @@ import "dotenv/config";
 dotenv.config();
 
 const app = express();
-// Ensure PORT is a number — when reading from process.env it's a string, and
-// Cloud Build / TypeScript can treat it as string which causes TS2769 when
-// passing to server.listen. Convert to number explicitly and fall back to 8080.
-const PORT: number = process.env.PORT ? Number(process.env.PORT) : 8080;
+// Ensure PORT is a number — when reading from process.env it's a string.
+// Convert to number explicitly and validate it is a positive integer so
+// TypeScript sees the correct type and the runtime doesn't end up with NaN.
+const _rawPort = process.env.PORT ? Number(process.env.PORT) : NaN;
+const PORT: number = Number.isInteger(_rawPort) && _rawPort > 0 ? _rawPort : 8080;
 
 // Middleware
 app.use(cors({
