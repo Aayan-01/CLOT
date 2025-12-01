@@ -70,10 +70,19 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-app.listen(PORT, () => {
+// Create an HTTP server and explicitly listen on 0.0.0.0 so Cloud Run and other
+// container platforms can bind to the container's network interface instead
+// of localhost.
+import http from 'http';
+
+const server = http.createServer(app);
+
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔑 Gemini API configured: ${!!(process.env.GOOGLE_CLOUD_GEMINI_API_KEY || process.env.GOOGLE_AI_STUDIO_FLASH_API_KEY)}`);
+  console.log(
+    `🔑 Gemini API configured: ${!!(process.env.GOOGLE_CLOUD_GEMINI_API_KEY || process.env.GOOGLE_AI_STUDIO_FLASH_API_KEY)}`
+  );
 });
 
 export default app;
