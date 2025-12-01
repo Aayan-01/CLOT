@@ -8,7 +8,8 @@ if (!admin.apps.length) {
   try {
     admin.initializeApp();
   } catch (e) {
-    console.warn('Firebase admin initializeApp warning:', e?.message || e);
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn('Firebase admin initializeApp warning:', msg);
   }
 }
 
@@ -24,7 +25,8 @@ export async function logAnalysis(sessionId: string, payload: any) {
     });
     return docRef.id;
   } catch (error) {
-    console.error('Failed to write AI log to Firestore:', error?.message || error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Failed to write AI log to Firestore:', msg);
     throw error;
   }
 }

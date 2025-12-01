@@ -8,7 +8,8 @@ if (!admin.apps.length) {
   try {
     admin.initializeApp();
   } catch (e) {
-    console.warn('firebase-admin initializeApp warning (session store):', e?.message || e);
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn('firebase-admin initializeApp warning (session store):', msg);
   }
 }
 

@@ -283,7 +283,8 @@ router.post('/analyze', uploadMiddleware, async (req, res) => {
         uploadedThumbs.push(r2);
       }
     } catch (gcsErr) {
-      console.warn('GCS upload failed, continuing — check configuration', gcsErr?.message || gcsErr);
+      const gcsErrMsg = gcsErr instanceof Error ? gcsErr.message : String(gcsErr);
+      console.warn('GCS upload failed, continuing — check configuration', gcsErrMsg);
     }
 
     // Remove temporary files (best-effort)
@@ -315,7 +316,8 @@ router.post('/analyze', uploadMiddleware, async (req, res) => {
         analysis,
       });
     } catch (err) {
-      console.warn('Failed to write AI log to Firestore:', err?.message || err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.warn('Failed to write AI log to Firestore:', errMsg);
     }
 
     console.log('✅ Analysis complete!');
