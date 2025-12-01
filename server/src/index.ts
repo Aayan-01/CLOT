@@ -11,7 +11,10 @@ import "dotenv/config";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+// Ensure PORT is a number — when reading from process.env it's a string, and
+// Cloud Build / TypeScript can treat it as string which causes TS2769 when
+// passing to server.listen. Convert to number explicitly and fall back to 8080.
+const PORT: number = process.env.PORT ? Number(process.env.PORT) : 8080;
 
 // Middleware
 app.use(cors({
