@@ -54,11 +54,22 @@ cp .env.example .env
 nano .env
 ```
 
-Required environment variables:
+Required environment variables (for local development, use .env or Secret Manager in production):
 ```bash
-GEMINI_API_KEY=your_actual_api_key_here
+GOOGLE_CLOUD_GEMINI_API_KEY=your_gemini_pro_vision_api_key_here
+GOOGLE_AI_STUDIO_FLASH_API_KEY=your_gemini_flash_api_key_here
 SESSION_SECRET=your_random_secret_string
 ```
+
+Optional client social links (useful for showing socials in the app):
+```bash
+# For the client (Vite) set these either in `client/.env` or in your CI
+VITE_SOCIAL_TWITTER=https://x.com/youraccount
+VITE_SOCIAL_INSTAGRAM=https://instagram.com/youraccount
+VITE_SOCIAL_LINKEDIN=https://linkedin.com/in/yourprofile
+```
+
+If you also want the static policy pages (served from client/public) to show the same banner, edit or replace `client/public/socials.json` with your production links. Static HTML pages include `client/public/bottom-banner.js` which reads `socials.json` and injects a site-wide bottom banner.
 
 ### 3. Run Development Server
 ```bash
@@ -68,7 +79,7 @@ npm run dev
 
 The application will be available at:
 - Frontend: http://localhost:5173
-- Backend: http://localhost:4000
+- Backend: http://localhost:8080
 
 ### 4. Run Tests
 ```bash
@@ -101,8 +112,9 @@ The application will be available at http://localhost:4000
 docker build -t cloth-authenticator .
 
 # Run container
-docker run -p 4000:4000 \
-  -e GEMINI_API_KEY=your_key \
+docker run -p 8080:8080 \
+  -e GOOGLE_CLOUD_GEMINI_API_KEY=your_key \
+  -e GOOGLE_AI_STUDIO_FLASH_API_KEY=your_flash_key \
   -e SESSION_SECRET=your_secret \
   -v $(pwd)/uploads:/app/uploads \
   cloth-authenticator
@@ -112,7 +124,7 @@ docker run -p 4000:4000 \
 
 ### Upload and Analyze Images
 ```bash
-curl -X POST http://localhost:4000/api/analyze \
+curl -X POST http://localhost:8080/api/analyze \
   -F "images=@/path/to/image1.jpg" \
   -F "images=@/path/to/image2.jpg" \
   -F "images=@/path/to/image3.jpg"
@@ -200,7 +212,7 @@ Before deploying to production:
    - [ ] Set strong `SESSION_SECRET` (32+ random characters)
    - [ ] Configure `ALLOWED_ORIGINS` with your domain
    - [ ] Set `NODE_ENV=production`
-   - [ ] Verify `GEMINI_API_KEY` is set
+  - [ ] Verify `GOOGLE_CLOUD_GEMINI_API_KEY` and `GOOGLE_AI_STUDIO_FLASH_API_KEY` are set (or configure via Secret Manager)
 
 2. **Security**
    - [ ] Enable HTTPS
@@ -211,13 +223,13 @@ Before deploying to production:
 
 3. **Performance**
    - [ ] Set up CDN for static assets
-   - [ ] Configure Redis for session storage
+  - [ ] (Optional) Configure Redis / Memorystore only if you prefer Redis-backed sessions for lower latency
    - [ ] Implement image optimization
    - [ ] Set up monitoring and logging
    - [ ] Configure automatic cleanup of old uploads
 
 4. **Scaling**
-   - [ ] Use database instead of in-memory sessions
+  - [ ] Use Firestore for session storage (the app now saves sessions to Firestore by default)
    - [ ] Set up load balancer
    - [ ] Configure horizontal scaling
    - [ ] Implement caching strategy
@@ -229,10 +241,30 @@ Before deploying to production:
 
 See [LIMITATIONS.md](LIMITATIONS.md) for known limitations and considerations.
 
+### Deploying to Cloud Run (service name: retro-rate)
+
+This repository includes a GitHub Actions workflow that builds and deploys a container to Google Cloud Run as the service `retro-rate`. For production use we rely on Secret Manager (no local .env) — make sure you have these secrets in Secret Manager in project `project-ea152037-584b-4621-acf`:
+
+- `GOOGLE_CLOUD_GEMINI_API_KEY`
+- `GOOGLE_AI_STUDIO_FLASH_API_KEY`
+- `SESSION_SECRET`
+- `GCS_BUCKET_NAME` (optional — recommended)
+ - `GCS_BUCKET_NAME` (optional — recommended). Note: the GitHub workflow expects a Secret Manager secret named `GCS_BUCKET_NAME` in the project; configure that in Secret Manager.
+
+Add the required GitHub secrets (GCP_SA_KEY, GCP_PROJECT_ID, GCP_REGION, GCS_BUCKET_NAME, GCS_MAKE_PUBLIC) then push to `main` to trigger the workflow.
+
+## Legal & policies
+
+Before going live you should review these project policies:
+
+- [Privacy Policy](./PRIVACY.md) — explains what (and why) we collect, contact for privacy requests.
+- [Terms of Service](./TERMS.md) — basic usage rules and liability information.
+- [Security Policy](./SECURITY.md) — how to report security vulnerabilities.
+
 ## Troubleshooting
 
 ### "Gemini API key not configured"
-- Ensure `GEMINI_API_KEY` is set in `.env` file
+- Ensure `GOOGLE_CLOUD_GEMINI_API_KEY` and `GOOGLE_AI_STUDIO_FLASH_API_KEY` are set in `.env` or configured via Secret Manager
 - Restart the server after updating environment variables
 
 ### Images not uploading
@@ -242,7 +274,7 @@ See [LIMITATIONS.md](LIMITATIONS.md) for known limitations and considerations.
 
 ### Port already in use
 - Change `PORT` in `.env` file
-- Kill process using the port: `lsof -ti:4000 | xargs kill -9`
+- Kill process using the port: `lsof -ti:8080 | xargs kill -9`
 
 ### Tests failing
 - Ensure all dependencies are installed: `cd server && npm install`
@@ -268,3 +300,5 @@ MIT License - See LICENSE file for details
 ## Support
 
 For issues, questions, or feature requests, please open an issue on GitHub.
+
+For privacy or security inquiries, or if you need data removed, contact: abc@gmail.com

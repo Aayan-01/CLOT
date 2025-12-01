@@ -1,0 +1,33 @@
+name: CI / Build & Deploy to Cloud Run
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set gcloud project
+        run: |
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Build container with Cloud Build
+        run: |
+          gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/retro-rate:latest
+
+      - name: Deploy to Cloud Run (service name: retro-rate)
+        run: |
+          gcloud run deploy retro-rate \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/retro-rate:latest \
+            --platform managed --region=${{ secrets.GCP_REGION }} \
+            --allow-unauthenticated \
+            --set-env-vars=GCS_MAKE_PUBLIC=${{ secrets.GCS_MAKE_PUBLIC }} \
+            --update-secrets=GCS_BUCKET_NAME=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/GCS_BUCKET_NAME:latest,GOOGLE_CLOUD_GEMINI_API_KEY=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/GOOGLE_CLOUD_GEMINI_API_KEY:latest,GOOGLE_AI_STUDIO_FLASH_API_KEY=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/GOOGLE_AI_STUDIO_FLASH_API_KEY:latest,SESSION_SECRET=projects/${{ secrets.GCP_PROJECT_ID }}/secrets/SESSION_SECRET:latest

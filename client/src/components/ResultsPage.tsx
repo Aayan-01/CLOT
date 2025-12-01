@@ -129,10 +129,11 @@ const ResultsPage: React.FC<ResultsPageProps> = ({
       <div className="relative z-10 max-w-4xl mx-auto p-6 md:p-10">
         {/* HEADER */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900">Analysis Results</h1>
-          <p className="text-gray-600 mt-2">
-            Here’s your detailed authenticity & pricing report.
-          </p>
+          <div className="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900">Retro Rate</div>
+          <p className="text-gray-600 mt-2 text-lg">AI-powered authenticity verification & price estimation</p>
+
+          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mt-6">Analysis Results</h1>
+          <p className="text-gray-600 mt-2">Here’s your detailed authenticity & pricing report.</p>
 
           <button
             onClick={onReset}

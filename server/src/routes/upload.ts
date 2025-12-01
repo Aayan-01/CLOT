@@ -1,10 +1,14 @@
 import express from 'express';
 import { uploadMiddleware } from '../middleware/upload';
+import os from 'os';
+import fs from 'fs';
+import path from 'path';
+import gcs from '../services/gcs';
+import firestore from '../services/firestore';
 import { processImages } from '../utils/imageProcessor';
 import { analyzeImages, computeAuthenticityWithAI, estimatePriceWithAI } from '../services/gemini';
 import { saveSession } from '../utils/sessionStore';
 import { v4 as uuidv4 } from 'uuid';
-import path from 'path';
 import { createThumbnailUrl } from '../utils/uploadUtil';
 import { AnalysisResult } from '../types';
 
@@ -58,27 +62,40 @@ router.post('/analyze', uploadMiddleware, async (req, res) => {
     }
 
     const files = req.files as Express.Multer.File[];
-    const imagePaths = files.map((f) => f.path);
 
-    // Step 1: Process images (create thumbnails)
+    // Create a temporary working dir on the container (Cloud Run has /tmp)
+    const tmpDir = path.join(os.tmpdir(), 'cloth-uploads');
+    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+
+    // Write multer buffers to temporary files so downstream code (sharp + Gemini) can read them
+    const localPaths: string[] = [];
+    for (const f of files) {
+      if (!f.buffer) continue; // skip if nothing
+      const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(f.originalname || '')}`;
+      const localPath = path.join(tmpDir, uniqueName);
+      fs.writeFileSync(localPath, f.buffer);
+      localPaths.push(localPath);
+    }
+
+    // Step 1: Process images (create thumbnails from local files)
     console.log('🖼️  Processing images...');
-    const thumbnails = await processImages(imagePaths);
+    const thumbnails = await processImages(localPaths);
 
     // Step 2: Analyze images with Gemini Pro Vision using Master Prompt
     console.log('🔍 Analyzing images with Gemini Pro Vision (Master Prompt)...');
-    const visionResults = await analyzeImages(imagePaths);
+    const visionResults = await analyzeImages(localPaths);
     
     // Parse the response for structured data
     const rawAnalysis = visionResults.rawResponse;
 
     // Step 3: Compute authenticity score with AI
     console.log('🔐 Computing authenticity score with AI...');
-    const authenticityResult = await computeAuthenticityWithAI(imagePaths, visionResults);
+    const authenticityResult = await computeAuthenticityWithAI(localPaths, visionResults);
 
     // Step 4: Estimate price with AI
     console.log('💰 Estimating price with AI...');
     const priceEstimate = await estimatePriceWithAI(
-      imagePaths,
+      localPaths,
       visionResults,
       authenticityResult,
       req.body.location || 'India'
@@ -247,13 +264,59 @@ router.post('/analyze', uploadMiddleware, async (req, res) => {
       needs_more_images: needsMoreImages,
     };
 
-    // Step 8: Save session
+    // Step 8: Upload original images + thumbnails to GCS (if configured) and save session
+    const uploadedOriginals: Array<{ objectName: string; publicUrl: string }> = [];
+    const uploadedThumbs: Array<{ objectName: string; publicUrl: string }> = [];
+
+    try {
+      // Upload originals
+      for (const lp of localPaths) {
+        const dest = `uploads/originals/${path.basename(lp)}`;
+        const r = await gcs.uploadFileToGCS(lp, dest).catch((e) => { throw e; });
+        uploadedOriginals.push(r);
+      }
+
+      // Upload thumbnails
+      for (const t of thumbnails) {
+        const destT = `uploads/thumbnails/${path.basename(t)}`;
+        const r2 = await gcs.uploadFileToGCS(t, destT).catch((e) => { throw e; });
+        uploadedThumbs.push(r2);
+      }
+    } catch (gcsErr) {
+      console.warn('GCS upload failed, continuing — check configuration', gcsErr?.message || gcsErr);
+    }
+
+    // Remove temporary files (best-effort)
+    for (const p of [...localPaths, ...thumbnails]) {
+      try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (e) { /* no-op */ }
+    }
+
+    // If uploads to GCS were successful, update analysis.thumbnails to use public URLs
+    if (uploadedThumbs.length > 0) {
+      analysis.thumbnails = uploadedThumbs.map(t => t.publicUrl);
+    } else {
+      // fallback: keep local thumbnails URL using existing helper (may be /uploads in dev)
+      analysis.thumbnails = thumbnails.map(t => createThumbnailUrl(req, t));
+    }
+
+    // Save session to session store (still uses local in-memory store by default)
     const sessionId = uuidv4();
-    saveSession(sessionId, {
-      imagePaths,
+    await saveSession(sessionId, {
+      imagePaths: uploadedOriginals.length ? uploadedOriginals.map(o => o.publicUrl) : localPaths,
       analysis,
       conversationHistory: [],
     });
+
+    // Log AI inputs & outputs into Firestore if available
+    try {
+      await firestore.logAnalysis(sessionId, {
+        originals: uploadedOriginals,
+        thumbnails: uploadedThumbs,
+        analysis,
+      });
+    } catch (err) {
+      console.warn('Failed to write AI log to Firestore:', err?.message || err);
+    }
 
     console.log('✅ Analysis complete!');
     res.json({ sessionId, analysis });

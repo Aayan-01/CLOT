@@ -1,81 +1,70 @@
+import admin from 'firebase-admin';
 import { SessionData } from '../types';
 
-/**
- * In-memory session store
- * For production, consider using Redis or a database
- */
-const sessions = new Map<string, SessionData>();
+// Use Firestore as a session store so Cloud Run instances do not rely on memory
+// Session documents are stored in collection `sessions` with fields { data, expiresAt }
 
-// Session expiry time (24 hours)
-const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000;
-
-interface SessionWithExpiry {
-  data: SessionData;
-  expiresAt: number;
+if (!admin.apps.length) {
+  try {
+    admin.initializeApp();
+  } catch (e) {
+    console.warn('firebase-admin initializeApp warning (session store):', e?.message || e);
+  }
 }
 
-const sessionsWithExpiry = new Map<string, SessionWithExpiry>();
+const db = admin.firestore();
 
-export function saveSession(sessionId: string, data: SessionData): void {
-  sessionsWithExpiry.set(sessionId, {
-    data,
-    expiresAt: Date.now() + SESSION_EXPIRY_MS,
-  });
+const SESSIONS_COLLECTION = process.env.SESSIONS_COLLECTION || 'sessions';
+const SESSION_TTL_MS = parseInt(process.env.SESSION_TTL_MS || String(24 * 60 * 60 * 1000), 10); // default 24h
+
+export async function saveSession(sessionId: string, data: SessionData): Promise<void> {
+  const docRef = db.collection(SESSIONS_COLLECTION).doc(sessionId);
+  const expiresAt = Date.now() + SESSION_TTL_MS;
+  await docRef.set({ data, expiresAt, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
 }
 
-export function getSession(sessionId: string): SessionData | null {
-  const session = sessionsWithExpiry.get(sessionId);
-  
-  if (!session) {
+export async function getSession(sessionId: string): Promise<SessionData | null> {
+  const doc = await db.collection(SESSIONS_COLLECTION).doc(sessionId).get();
+  if (!doc.exists) return null;
+  const payload = doc.data() as any;
+  if (!payload) return null;
+
+  if (payload.expiresAt && Date.now() > payload.expiresAt) {
+    // expired
+    await db.collection(SESSIONS_COLLECTION).doc(sessionId).delete().catch(() => {});
     return null;
   }
-
-  // Check if session has expired
-  if (Date.now() > session.expiresAt) {
-    sessionsWithExpiry.delete(sessionId);
-    return null;
-  }
-
-  return session.data;
+  return payload.data as SessionData;
 }
 
-export function updateSession(sessionId: string, data: SessionData): void {
-  const session = sessionsWithExpiry.get(sessionId);
-  
-  if (session) {
-    session.data = data;
-    // Extend expiry on update
-    session.expiresAt = Date.now() + SESSION_EXPIRY_MS;
-  }
+export async function updateSession(sessionId: string, data: SessionData): Promise<void> {
+  const docRef = db.collection(SESSIONS_COLLECTION).doc(sessionId);
+  const expiresAt = Date.now() + SESSION_TTL_MS;
+  await docRef.set({ data, expiresAt, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 }
 
-export function deleteSession(sessionId: string): void {
-  sessionsWithExpiry.delete(sessionId);
+export async function deleteSession(sessionId: string): Promise<void> {
+  await db.collection(SESSIONS_COLLECTION).doc(sessionId).delete().catch(() => {});
 }
 
-/**
- * Cleanup expired sessions periodically
- */
+// Provide a best-effort cleanup job for expired sessions (runs in-process — note Cloud Run instances are ephemeral)
 export function startSessionCleanup(): void {
-  setInterval(() => {
-    const now = Date.now();
-    const expiredSessions: string[] = [];
-
-    sessionsWithExpiry.forEach((session, sessionId) => {
-      if (now > session.expiresAt) {
-        expiredSessions.push(sessionId);
-      }
-    });
-
-    expiredSessions.forEach((sessionId) => {
-      sessionsWithExpiry.delete(sessionId);
-    });
-
-    if (expiredSessions.length > 0) {
-      console.log(`Cleaned up ${expiredSessions.length} expired sessions`);
+  setInterval(async () => {
+    try {
+      const cutoff = Date.now();
+      const snapshot = await db.collection(SESSIONS_COLLECTION).where('expiresAt', '<', cutoff).get();
+      const batch = db.batch();
+      let removed = 0;
+      snapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+        removed++;
+      });
+      if (removed > 0) await batch.commit();
+      if (removed > 0) console.log(`Cleaned up ${removed} expired sessions from Firestore`);
+    } catch (e) {
+      // non-fatal
     }
-  }, 60 * 60 * 1000); // Run every hour
+  }, 60 * 60 * 1000); // hourly
 }
 
-// Start cleanup on module load
 startSessionCleanup();

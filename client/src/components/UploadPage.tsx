@@ -154,11 +154,9 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalysisComplete }) => {
       <div className="relative z-20 flex items-center justify-center min-h-screen p-4 pointer-events-auto">
         <div className="max-w-2xl w-full">
 
-          {/* Header */}
+          {/* Header (single visible text only) */}
           <div className="text-center mb-10">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
-              Cloth Authenticator
-            </h1>
+            <div className="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900">Retro Rate</div>
             <p className="text-gray-600 mt-2 text-lg">
               AI-powered authenticity verification & price estimation
             </p>

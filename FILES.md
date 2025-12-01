@@ -247,12 +247,9 @@ npm test             # Run Jest tests with coverage
 ## Key Integration Points
 
 - **Frontend-Backend**: Vite proxy at `/api` forwards to Express server
-- **Image Storage**: Multer saves to `/uploads`, Sharp creates thumbnails
+**Image Storage**: Multer uses in-memory buffers (Cloud Run compatible). Files are written to `/tmp` for processing, thumbnails are created locally, and both originals & thumbnails are uploaded to Google Cloud Storage (GCS) in `uploads/originals` and `uploads/thumbnails`.
 - **AI Integration**: gemini.ts wraps dual Gemini API calls with error handling
   - **NEW**: Pro Vision (Google Cloud) for image authentication
-  - **NEW**: Flash (AI Studio) for chat continuation
-- **Session Management**: sessionStore.ts provides in-memory storage with auto-expiry
-- **Type Safety**: Shared TypeScript interfaces ensure contract between frontend/backend
   - **UPDATED**: Extended with comprehensive new fields for enhanced features
 
 ## Recent Major Updates

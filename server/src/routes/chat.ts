@@ -12,7 +12,7 @@ router.post('/chat', async (req, res) => {
       return res.status(400).json({ error: 'Session ID and message required' });
     }
 
-    const session = getSession(sessionId);
+    const session = await getSession(sessionId);
     if (!session) {
       return res.status(404).json({ error: 'Session not found' });
     }
@@ -63,7 +63,7 @@ router.post('/chat', async (req, res) => {
       { role: 'user', content: message },
       { role: 'assistant', content: response }
     );
-    updateSession(sessionId, session);
+    await updateSession(sessionId, session);
 
     res.json({ response });
   } catch (error: any) {

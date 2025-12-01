@@ -1,24 +1,13 @@
 import multer from 'multer';
+import os from 'os';
 import path from 'path';
-import fs from 'fs';
 
+// Use memory storage for Cloud Run compatibility — files will be processed
+// in-memory and written to /tmp when needed. This avoids relying on
+// container-local persistent disk.
 const MAX_SIZE = parseInt(process.env.MAX_UPLOAD_SIZE_MB || '8') * 1024 * 1024;
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
+const storage = multer.memoryStorage();
 
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];

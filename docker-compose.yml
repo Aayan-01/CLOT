@@ -4,11 +4,14 @@ services:
   app:
     build: .
     ports:
-      - "4000:4000"
+      - "8080:8080"
     environment:
       - NODE_ENV=production
-      - PORT=4000
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - PORT=8080
+      - GCS_BUCKET_NAME=${GCS_BUCKET_NAME}
+      - GCS_MAKE_PUBLIC=${GCS_MAKE_PUBLIC:-true}
+      - GOOGLE_CLOUD_GEMINI_API_KEY=${GOOGLE_CLOUD_GEMINI_API_KEY}
+      - GOOGLE_AI_STUDIO_FLASH_API_KEY=${GOOGLE_AI_STUDIO_FLASH_API_KEY}
       - GEMINI_ENDPOINT=${GEMINI_ENDPOINT:-https://generativelanguage.googleapis.com/v1beta}
       - INR_TO_USD=${INR_TO_USD:-0.012}
       - SESSION_SECRET=${SESSION_SECRET}

@@ -11,7 +11,7 @@ import "dotenv/config";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 8080;
 
 // Middleware
 app.use(cors({
@@ -36,8 +36,10 @@ app.use(
   })
 );
 
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve uploaded files only when not using GCS (local dev)
+if (!process.env.GCS_BUCKET_NAME) {
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+}
 
 // Serve static frontend in production
 if (process.env.NODE_ENV === 'production') {
@@ -71,7 +73,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔑 Gemini API configured: ${!!process.env.GEMINI_API_KEY}`);
+  console.log(`🔑 Gemini API configured: ${!!(process.env.GOOGLE_CLOUD_GEMINI_API_KEY || process.env.GOOGLE_AI_STUDIO_FLASH_API_KEY)}`);
 });
 
 export default app;
