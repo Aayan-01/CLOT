@@ -19,7 +19,7 @@ const PORT: number = Number.isInteger(_rawPort) && _rawPort > 0 ? _rawPort : 808
 
 // Middleware
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:5173',
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
   credentials: true,
 }));
 
