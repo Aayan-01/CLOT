@@ -81,6 +81,11 @@ The application will be available at:
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8080
 
+Note: when deploying the client and server separately (for example frontend hosted on Vercel / static hosting and backend on Cloud Run), set the following environment variables before building:
+
+- For the client (during build): VITE_API_ORIGIN — set to your backend URL (eg. https://retro-rate-abcdef.a.run.app)
+- For the server: ALLOWED_ORIGINS — set to your frontend origin (eg. https://your-frontend.example.com) so CORS requests succeed
+
 ### 4. Run Tests
 ```bash
 # Run backend tests
@@ -124,7 +129,7 @@ docker run -p 8080:8080 \
 
 ### Upload and Analyze Images
 ```bash
-curl -X POST http://localhost:8080/api/analyze \
+curl -X POST ${BACKEND_URL:-http://localhost:8080}/api/analyze \
   -F "images=@/path/to/image1.jpg" \
   -F "images=@/path/to/image2.jpg" \
   -F "images=@/path/to/image3.jpg"
@@ -167,7 +172,7 @@ Response:
 
 ### Continue Chat
 ```bash
-curl -X POST http://localhost:4000/api/chat \
+curl -X POST ${BACKEND_URL:-http://localhost:4000}/api/chat \
   -H "Content-Type: application/json" \
   -d '{
     "sessionId": "uuid-from-previous-response",
@@ -211,6 +216,23 @@ Before deploying to production:
 1. **Environment Variables**
    - [ ] Set strong `SESSION_SECRET` (32+ random characters)
    - [ ] Configure `ALLOWED_ORIGINS` with your domain
+  2. **Frontend (static) hosting on Google Cloud Storage / CDN**
+
+  - When you host the compiled frontend separately (for example on Google Cloud Storage, Cloud CDN, or another static host) you must build the client with VITE_API_ORIGIN set to the backend URL so the browser can reach your API.
+  - Example GitHub Actions setup (see .github/workflows/deploy-client-gcs.yml in repo):
+
+    Required repo secrets:
+    - `GCP_SA_KEY` — service account key JSON with Storage Admin permission
+    - `GCP_PROJECT_ID` — your Google Cloud project id
+    - `GCS_BUCKET_NAME` — name of the public bucket used for static hosting
+    - `BACKEND_API_URL` — the backend URL that the client will call (eg. https://retro-rate-abcdef.a.run.app)
+
+    The action builds the client with VITE_API_ORIGIN=$BACKEND_API_URL and uploads dist/ to the GCS bucket. The built app will call the backend endpoint you provide.
+
+    Notes:
+    - In production it's preferable to keep the bucket private and serve assets via Cloud CDN and signed URLs; the example action sets public objectViewer for convenience/demos.
+    - Make sure the server's `ALLOWED_ORIGINS` includes your frontend origin so browsers can make cross-origin requests.
+
    - [ ] Set `NODE_ENV=production`
   - [ ] Verify `GOOGLE_CLOUD_GEMINI_API_KEY` and `GOOGLE_AI_STUDIO_FLASH_API_KEY` are set (or configure via Secret Manager)
 

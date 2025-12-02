@@ -26,6 +26,22 @@ Files and placeholders in the repo which you must replace or configure in Cloud 
   - `GCS_MAKE_PUBLIC` → (true/false) whether objects should be made publicly readable (recommended: set false and use signed URLs, but for quick demo 'true' works)
   - `SESSION_SECRET` → set as secret
 
+  # Networking / frontend-backend settings
+  - `ALLOWED_ORIGINS` → comma-separated list of allowed CORS origins (e.g. `https://my-frontend.example.com`). When the frontend (client) is hosted separately, set this to the frontend origin so browsers can successfully call your backend.
+  - `VITE_API_ORIGIN` → the backend URL used by the compiled frontend to reach your API, for example `https://retro-rate-abcdef.a.run.app`. When building/publishing the client for production set this so the frontend makes API calls to the correct Cloud Run endpoint rather than localhost.
+
+  Client-only hosting (static site on Google Cloud Storage)
+
+  If you're only hosting the frontend on Google Cloud (static hosting) and your backend is elsewhere (e.g., Cloud Run), we include a CI workflow that builds the client with the correct backend URL and syncs to a GCS bucket.
+
+  Required repo secrets for the client deploy workflow:
+  - `GCP_SA_KEY` — JSON service account key (Storage Admin or Storage Object Admin)
+  - `GCP_PROJECT_ID` — your project id
+  - `GCS_BUCKET_NAME` — the bucket name to deploy the built client files into
+  - `BACKEND_API_URL` — the URL the frontend should call (same value will be injected into the build as `VITE_API_ORIGIN`)
+
+  Check `.github/workflows/deploy-client-gcs.yml` for the example implementation. The action sets VITE_API_ORIGIN from `BACKEND_API_URL` and uploads the `client/dist` directory to your bucket.
+
 How the repo is wired after the changes:
 
 - Uploads are accepted by the server via multer memory storage (Cloud Run ephemeral storage). Files are written to `/tmp` for processing and then uploaded to your configured GCS bucket in `uploads/originals` and `uploads/thumbnails`.

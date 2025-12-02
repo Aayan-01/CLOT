@@ -55,6 +55,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ sessionId }) => {
 
   useEffect(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages]);
 
+  const API_ORIGIN = (import.meta as any).env?.VITE_API_ORIGIN ?? ((import.meta as any).env?.DEV ? 'http://localhost:4000' : window.location.origin);
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -65,18 +67,18 @@ const Chatbot: React.FC<ChatbotProps> = ({ sessionId }) => {
 
     // health check like older ChatBox logic
     try {
-      await axios.get('http://localhost:4000/api/health', { timeout: 2000 });
+      await axios.get(`${API_ORIGIN}/api/health`, { timeout: 2000 });
     } catch (hErr) {
-      setMessages((s) => [...s, { role: 'assistant', content: 'Backend server not reachable at http://localhost:4000 — please start the server with `cd server && npm run dev`.', timestamp: new Date() }]);
+      setMessages((s) => [...s, { role: 'assistant', content: `Backend server not reachable at ${API_ORIGIN} — please verify your deployment or start the server locally with \`cd server && npm run dev\`.`, timestamp: new Date() }]);
       setIsLoading(false);
       return;
     }
 
     try {
-      const response = await axios.post<{ response: string }>('/api/chat', { sessionId, message: input });
+      const response = await axios.post<{ response: string }>(`${API_ORIGIN}/api/chat`, { sessionId, message: input });
       setMessages((s) => [...s, { role: 'assistant', content: response.data.response, timestamp: new Date() }]);
     } catch (err: any) {
-      setMessages((s) => [...s, { role: 'assistant', content: (err?.code === 'ECONNREFUSED' || (err?.message || '').includes('ECONNREFUSED')) ? 'Could not reach the backend server (http://localhost:4000). Please start the server with `cd server && npm run dev` and try again.' : 'Sorry, I encountered an error. Please try again.', timestamp: new Date() }]);
+      setMessages((s) => [...s, { role: 'assistant', content: (err?.code === 'ECONNREFUSED' || (err?.message || '').includes('ECONNREFUSED')) ? `Could not reach the backend server (${API_ORIGIN}). Please start the server with \`cd server && npm run dev\` and try again.` : 'Sorry, I encountered an error. Please try again.', timestamp: new Date() }]);
     } finally {
       setIsLoading(false);
     }

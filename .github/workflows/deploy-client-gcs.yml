@@ -1,0 +1,54 @@
+name: Build & Deploy Frontend to GCS
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-publish-client:
+    runs-on: ubuntu-latest
+    env:
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
+      BACKEND_API_URL: ${{ secrets.BACKEND_API_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set gcloud project
+        run: |
+          gcloud config set project $GCP_PROJECT_ID
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install client deps
+        working-directory: client
+        run: npm ci
+
+      - name: Build client (inject backend URL)
+        working-directory: client
+        env:
+          # Vite only picks up env variables with VITE_ prefix at build time
+          VITE_API_ORIGIN: ${{ env.BACKEND_API_URL }}
+        run: |
+          npm run build
+
+      - name: Publish built client to Cloud Storage
+        run: |
+          # Ensure bucket exists (skip if it already does)
+          gsutil mb -p $GCP_PROJECT_ID -c STANDARD -l us-central1 gs://$GCS_BUCKET_NAME || true
+          # Sync build output to the bucket
+          gsutil -m rsync -r client/dist gs://$GCS_BUCKET_NAME
+          # Make files publicly readable (optional - configure for production using signed URLs + Cloud CDN)
+          gsutil iam ch allUsers:objectViewer gs://$GCS_BUCKET_NAME
+
+      - name: Invalidate CDN (optional)
+        run: echo "Skip CDN invalidation: configure your CDN if needed"

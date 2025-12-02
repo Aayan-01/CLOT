@@ -17,6 +17,8 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalysisComplete }) => {
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const API_ORIGIN = (import.meta as any).env?.VITE_API_ORIGIN ?? ((import.meta as any).env?.DEV ? 'http://localhost:4000' : window.location.origin);
+
   /** ------------------------------
    *  HANDLE FILE SELECTION
    * ------------------------------ */
@@ -77,9 +79,9 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalysisComplete }) => {
   const handleSubmit = async () => {
     // Health Check
     try {
-      await axios.get("http://localhost:4000/api/health", { timeout: 2000 });
+      await axios.get(`${API_ORIGIN}/api/health`, { timeout: 2000 });
     } catch {
-      setError('Backend server unreachable at http://localhost:4000 — please start the server: `cd server && npm run dev`');
+      setError(`Backend server unreachable at ${API_ORIGIN} — please verify your deployment or start the server locally: \`cd server && npm run dev\``);
       return;
     }
 
@@ -99,7 +101,7 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalysisComplete }) => {
       setProgress("Analyzing images...");
 
       const { data } = await axios.post(
-        '/api/analyze',
+        `${API_ORIGIN}/api/analyze`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },

@@ -100,7 +100,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({
     // If the server sent a relative uploads path (with or without leading slash),
     // prepend the API origin so the browser can fetch it correctly.
     if (normalized.startsWith('/uploads') || normalized.startsWith('uploads')) {
-      const apiOrigin = (import.meta as any).env?.VITE_API_ORIGIN ?? 'http://localhost:4000';
+      const apiOrigin = (import.meta as any).env?.VITE_API_ORIGIN ?? ((import.meta as any).env?.DEV ? 'http://localhost:4000' : window.location.origin);
       return `${apiOrigin}${normalized.startsWith('/') ? normalized : '/' + normalized}`;
     }
 
