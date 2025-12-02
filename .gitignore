@@ -23,6 +23,10 @@ npm-debug.log*
 # Server-side uploaded files — don't track these in git
 server/uploads/
 
+# Allow committing client/dist for static deployment artifacts when desired
+!client/dist/
+!client/dist/**
+
 
 # OS files
 .DS_Store
