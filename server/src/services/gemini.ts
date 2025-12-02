@@ -39,14 +39,21 @@ export interface PriceEstimate {
 
 // Google Cloud API Key (for Pro Vision - Image Authentication)
 const GOOGLE_CLOUD_API_KEY = process.env.GOOGLE_CLOUD_GEMINI_API_KEY;
-if (!GOOGLE_CLOUD_API_KEY) {
-  throw new Error("⛔ Missing GOOGLE_CLOUD_GEMINI_API_KEY in .env");
-}
 
 // Google AI Studio API Key (for Flash - Chat Continuation)
 const GOOGLE_AI_STUDIO_API_KEY = process.env.GOOGLE_AI_STUDIO_FLASH_API_KEY;
-if (!GOOGLE_AI_STUDIO_API_KEY) {
-  throw new Error("⛔ Missing GOOGLE_AI_STUDIO_FLASH_API_KEY in .env");
+
+// Helper checks: don't throw at module import time so service can start.
+function ensureGeminiKey() {
+  if (!GOOGLE_CLOUD_API_KEY) {
+    throw new Error('Gemini Vision API key not configured — set GOOGLE_CLOUD_GEMINI_API_KEY in your environment (Cloud Run/ .env)');
+  }
+}
+
+function ensureFlashKey() {
+  if (!GOOGLE_AI_STUDIO_API_KEY) {
+    throw new Error('Gemini Flash API key not configured — set GOOGLE_AI_STUDIO_FLASH_API_KEY in your environment (Cloud Run/ .env)');
+  }
 }
 
 // API Endpoints
@@ -134,6 +141,8 @@ export async function analyzeImages(
   customPrompt?: string
 ): Promise<GeminiVisionResult> {
   try {
+    // Validate configuration
+    ensureGeminiKey();
     const imageParts = imagePaths.map((imagePath) => {
       const imageBuffer = fs.readFileSync(imagePath);
       const base64Image = imageBuffer.toString('base64');
@@ -196,6 +205,8 @@ export async function computeAuthenticityWithAI(
   visionAnalysis?: GeminiVisionResult
 ): Promise<AuthenticityResult> {
   try {
+    // Verify key configuration
+    ensureGeminiKey();
     let analysisText = '';
     if (visionAnalysis) {
       analysisText = visionAnalysis.rawResponse;
@@ -370,6 +381,8 @@ export async function estimatePriceWithAI(
   userLocation: string = "India"
 ): Promise<PriceEstimate> {
   try {
+    // Verify configuration
+    ensureGeminiKey();
     let analysisText = '';
     if (visionAnalysis) {
       analysisText = visionAnalysis.rawResponse;
@@ -541,9 +554,8 @@ Rules:
  * Used for: Follow-up chat messages
  */
 export async function askGemini(prompt: string, context?: string): Promise<string> {
-  if (!GOOGLE_AI_STUDIO_API_KEY) {
-    throw new Error("Missing GOOGLE_AI_STUDIO_FLASH_API_KEY");
-  }
+  // Ensure the Gemini Flash key exists at runtime
+  ensureFlashKey();
 
   try {
     const fullPrompt = context ? `${context}\n\n${prompt}` : prompt;

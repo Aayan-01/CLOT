@@ -57,6 +57,11 @@ const extractPlatformNames = (text: string): string[] => {
 
 router.post('/analyze', uploadMiddleware, async (req, res) => {
   try {
+    // Ensure AI backend is configured before doing heavy work
+    if (!process.env.GOOGLE_CLOUD_GEMINI_API_KEY) {
+      console.warn('🔕 /analyze called but GOOGLE_CLOUD_GEMINI_API_KEY not configured');
+      return res.status(503).json({ error: 'AI backend not configured', details: 'Missing GOOGLE_CLOUD_GEMINI_API_KEY' });
+    }
     if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
       return res.status(400).json({ error: 'No images uploaded' });
     }
