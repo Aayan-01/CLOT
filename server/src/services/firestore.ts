@@ -28,8 +28,27 @@ try {
 export async function logAnalysis(sessionId: string, payload: any) {
   try {
     const docRef = db.collection('ai_logs').doc(sessionId);
+
+    // Recursively remove undefined values to avoid Firestore write errors for older SDKs
+    const sanitize = (input: any): any => {
+      if (input === undefined) return undefined;
+      if (input === null) return null;
+      if (Array.isArray(input)) return input.map(sanitize).filter((v) => v !== undefined);
+      if (typeof input === 'object') {
+        const out: any = {};
+        for (const [k, v] of Object.entries(input)) {
+          const s = sanitize(v);
+          if (s !== undefined) out[k] = s;
+        }
+        return out;
+      }
+      return input;
+    };
+
+    const sanitizedPayload = sanitize(payload);
+
     await docRef.set({
-      ...payload,
+      ...sanitizedPayload,
       sessionId,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
