@@ -15,6 +15,19 @@ const bucket = bucketName ? storage.bucket(bucketName) : null;
 export async function uploadFileToGCS(localPath: string, destPath?: string): Promise<{ publicUrl: string; objectName: string }>{
   if (!bucket) throw new Error('GCS bucket not configured');
 
+  // Verify the bucket exists and is accessible. If it doesn't, surface a clear error
+  // so calling code can continue with fallback behavior.
+  try {
+    const [exists] = await bucket.exists();
+    if (!exists) {
+      throw new Error(`GCS bucket does not exist: ${bucketName}`);
+    }
+  } catch (err: any) {
+    // If the check fails, include the underlying message.
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`GCS check failed for bucket ${bucketName}: ${msg}`);
+  }
+
   const filename = destPath || path.basename(localPath);
 
   await bucket.upload(localPath, {
@@ -45,6 +58,15 @@ function getContentTypeFromFilename(fname: string) {
 
 export async function uploadBufferToGCS(buffer: Buffer, destPath: string): Promise<{ publicUrl: string; objectName: string }> {
   if (!bucket) throw new Error('GCS bucket not configured');
+
+  // Verify bucket exists before attempting save
+  try {
+    const [exists] = await bucket.exists();
+    if (!exists) throw new Error(`GCS bucket does not exist: ${bucketName}`);
+  } catch (err: any) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`GCS check failed for bucket ${bucketName}: ${msg}`);
+  }
 
   const file = bucket.file(destPath);
   await file.save(buffer, { contentType: getContentTypeFromFilename(destPath) });
