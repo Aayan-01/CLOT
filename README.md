@@ -1,6 +1,6 @@
 # Cloth Authenticator & Price Estimator
 
-AI-powered cloth authentication and price estimation system using Gemini Vision AI. Upload 1-3 images and get instant analysis of authenticity, condition, era, and estimated resale prices in INR and USD.
+AI-powered cloth authentication and price estimation system using Gemini Vision AI. Upload 1-3 images and get instant analysis of authenticity, condition, era, and estimated resale prices in INR only
 
 ## Features
 
