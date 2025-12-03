@@ -37,7 +37,7 @@ jobs:
         working-directory: client
         env:
           # Vite only picks up env variables with VITE_ prefix at build time
-          VITE_API_ORIGIN: ${{ env.BACKEND_API_URL }}
+          : ${{ env.BACKEND_API_URL }}
         run: |
           npm run build
 

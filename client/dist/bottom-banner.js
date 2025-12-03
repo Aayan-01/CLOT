@@ -29,7 +29,7 @@
 
     const contact = document.createElement('div');
     contact.style.cssText = 'font-size:13px;color:#ddd';
-    contact.innerHTML = 'Contact: <a href="mailto:abc@gmail.com" style="color:#fff;text-decoration:underline">abc@gmail.com</a>';
+    contact.innerHTML = 'Contact: <a href="mailto:help.retrorate@gmail.com" style="color:#fff;text-decoration:underline">help.retrorate@gmail.com</a>';
 
     const socialsEl = document.createElement('div');
     socialsEl.style.cssText = 'display:flex;align-items:center;gap:12px';

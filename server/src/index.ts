@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import uploadRoutes from './routes/upload';
 import chatRoutes from './routes/chat';
+import storageRoutes from './routes/storage';
 import "dotenv/config";
 
 
@@ -51,6 +52,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // API Routes
+app.use('/api', storageRoutes);
 app.use('/api', uploadRoutes);
 app.use('/api', chatRoutes);
 

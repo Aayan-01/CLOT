@@ -314,7 +314,9 @@ router.post('/analyze', uploadMiddleware, async (req, res) => {
 
     // If uploads to GCS were successful, update analysis.thumbnails to use public URLs
     if (uploadedThumbs.length > 0) {
-      analysis.thumbnails = uploadedThumbs.map(t => t.publicUrl);
+      // Use server-proxied URLs so images display even when GCS objects are not public
+      const origin = `${req.protocol}://${req.get('host')}`;
+      analysis.thumbnails = uploadedThumbs.map(t => `${origin}/api/storage?object=${encodeURIComponent(t.objectName)}`);
     } else {
       // fallback: keep local thumbnails URL using existing helper (may be /uploads in dev)
       analysis.thumbnails = finalThumbnails.map(t => createThumbnailUrl(req, t));
