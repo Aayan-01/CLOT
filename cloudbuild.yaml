@@ -21,15 +21,15 @@ steps:
     args: ['run', 'build']
     dir: 'client'
 
-  # 3) Sync built static files to GCS
+  # 3) Sync dist folder to GCS and delete removed files
   - name: 'gcr.io/cloud-builders/gsutil'
-    id: 'Sync client to GCS'
+    id: 'Sync dist folder to GCS'
     entrypoint: '/bin/sh'
     args:
       - '-c'
       - |
         if [ -n "${_FRONTEND_BUCKET}" ]; then
-          gsutil -m rsync -r client/dist gs://${_FRONTEND_BUCKET}
+          gsutil -m rsync -d -r client/dist gs://${_FRONTEND_BUCKET}/dist/
         else
           echo "SKIPPING: _FRONTEND_BUCKET not set"
         fi
