@@ -1,0 +1,60 @@
+substitutions:
+  _FRONTEND_BUCKET: ""  # set in trigger or build invocation
+  _CLOUD_RUN_SERVICE: ""  # set in trigger or build invocation
+  _CLOUD_RUN_REGION: "asia-south1"
+images:
+  - "gcr.io/$PROJECT_ID/backend-image:$SHORT_SHA"
+
+steps:
+  # 1) Install client deps in a small Node image
+  - name: 'node:18-alpine'
+    id: 'Install client dependencies'
+    entrypoint: 'npm'
+    args: ['ci']
+    dir: 'client'
+
+  # 2) Build client (production)
+  - name: 'node:18-alpine'
+    id: 'Build client'
+    entrypoint: 'npm'
+    env: ['NODE_ENV=production']
+    args: ['run', 'build']
+    dir: 'client'
+
+  # 3) Sync built static files to GCS
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'Sync client to GCS'
+    args: ['-m', 'rsync', '-r', 'client/build', 'gs://${_FRONTEND_BUCKET}']
+
+  # 4) Build backend Docker image using 'backend' folder as context
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build backend image'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/backend-image:$SHORT_SHA', 'backend']
+
+  # 5) Push the image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push backend image'
+    args: ['push', 'gcr.io/$PROJECT_ID/backend-image:$SHORT_SHA']
+
+  # 6) Deploy to Cloud Run (managed) in the chosen region and allow unauthenticated access
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Deploy to Cloud Run'
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_CLOUD_RUN_SERVICE}'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/backend-image:$SHORT_SHA'
+      - '--region'
+      - '${_CLOUD_RUN_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--quiet'
+
+options:
+  substitutionOption: 'ALLOW_LOOSE'  # permit unspecified substitutions at trigger-time
+
+# Notes:
+# - This config assumes the repo contains a 'frontend' folder and a 'backend' folder per your request.
+# - Keep substitutions set in your Cloud Build trigger for production values.
