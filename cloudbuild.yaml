@@ -24,7 +24,15 @@ steps:
   # 3) Sync built static files to GCS
   - name: 'gcr.io/cloud-builders/gsutil'
     id: 'Sync client to GCS'
-    args: ['-m', 'rsync', '-r', 'client/dist', 'gs://${_FRONTEND_BUCKET}']
+    entrypoint: '/bin/sh'
+    args:
+      - '-c'
+      - |
+        if [ -n "${_FRONTEND_BUCKET}" ]; then
+          gsutil -m rsync -r client/dist gs://${_FRONTEND_BUCKET}
+        else
+          echo "SKIPPING: _FRONTEND_BUCKET not set"
+        fi
 
   # 4) Build backend Docker image using 'backend' folder as context
   - name: 'gcr.io/cloud-builders/docker'
