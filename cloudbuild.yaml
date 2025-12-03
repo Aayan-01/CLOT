@@ -1,6 +1,6 @@
 substitutions:
   _FRONTEND_BUCKET: "retro-rate-client"  # set in trigger or build invocation
-  _CLOUD_RUN_SERVICE: ""  # set in trigger or build invocation
+  _CLOUD_RUN_SERVICE: "clot"  # set in trigger or build invocation
   _CLOUD_RUN_REGION: "asia-south1"
 images:
   - "gcr.io/$PROJECT_ID/backend-image:$SHORT_SHA"
