@@ -83,8 +83,8 @@ The application will be available at:
 
 Note: when deploying the client and server separately (for example frontend hosted on Vercel / static hosting and backend on Cloud Run), set the following environment variables before building:
 
-- For the client (during build): VITE_API_ORIGIN — set to your backend URL (eg. https://retro-rate-abcdef.a.run.app)
-- For the server: ALLOWED_ORIGINS — set to your frontend origin (eg. https://your-frontend.example.com) so CORS requests succeed
+- For the client (during build): VITE_API_ORIGIN — set to your backend URL (eg. https://api.retrorate.in)
+- For the server: ALLOWED_ORIGINS — set to your frontend origin (eg. https://retrorate.in,https://www.retrorate.in) so CORS requests succeed
 
 ### 4. Run Tests
 ```bash

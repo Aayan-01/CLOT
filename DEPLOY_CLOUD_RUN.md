@@ -27,8 +27,8 @@ Files and placeholders in the repo which you must replace or configure in Cloud 
   - `SESSION_SECRET` → set as secret
 
   # Networking / frontend-backend settings
-  - `ALLOWED_ORIGINS` → comma-separated list of allowed CORS origins (e.g. `https://my-frontend.example.com`). When the frontend (client) is hosted separately, set this to the frontend origin so browsers can successfully call your backend.
-  - `VITE_API_ORIGIN` → the backend URL used by the compiled frontend to reach your API, for example `https://retro-rate-abcdef.a.run.app`. When building/publishing the client for production set this so the frontend makes API calls to the correct Cloud Run endpoint rather than localhost.
+  - `ALLOWED_ORIGINS` → comma-separated list of allowed CORS origins (e.g. `https://retrorate.in,https://www.retrorate.in`). When the frontend (client) is hosted separately, set this to the frontend origin so browsers can successfully call your backend.
+  - `VITE_API_ORIGIN` → the backend URL used by the compiled frontend to reach your API, for example `https://api.retrorate.in`. When building/publishing the client for production set this so the frontend makes API calls to the correct Cloud Run endpoint rather than localhost.
 
   Client-only hosting (static site on Google Cloud Storage)
 

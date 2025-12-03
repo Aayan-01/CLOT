@@ -1,8 +1,8 @@
 import admin from 'firebase-admin';
 import { SessionData } from '../types';
 
-// Use Firestore as a session store so Cloud Run instances do not rely on memory
-// Session documents are stored in collection `sessions` with fields { data, expiresAt }
+// Use Firestore as a session store so Cloud Run instances do not rely on memory.
+// Session documents are stored in collection `sessions` with fields { data, expiresAt }.
 
 if (!admin.apps.length) {
   try {
