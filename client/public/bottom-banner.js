@@ -29,7 +29,7 @@
 
     const contact = document.createElement('div');
     contact.style.cssText = 'font-size:13px;color:#ddd';
-    contact.innerHTML = 'Contact: <a href="mailto:abc@gmail.com" style="color:#fff;text-decoration:underline">abc@gmail.com</a>';
+    contact.innerHTML = 'Contact: <a href="mailto:help.retrorate@gmail.com" style="color:#fff;text-decoration:underline">help.retrorate@gmail.com</a>';
 
     const socialsEl = document.createElement('div');
     socialsEl.style.cssText = 'display:flex;align-items:center;gap:12px';
@@ -44,13 +44,14 @@
       a.style.display = 'inline-flex';
       a.style.alignItems = 'center';
       a.style.justifyContent = 'center';
-      a.style.width = '36px';
-      a.style.height = '36px';
-      a.style.borderRadius = '6px';
-      a.style.background = 'rgba(255,255,255,0.05)';
+      a.style.width = '32px';
+      a.style.height = '32px';
+      a.style.borderRadius = '8px';
+      a.style.background = '#4b5563';
+      a.style.transition = 'background 0.2s ease';
       a.innerHTML = svg;
-      a.onmouseenter = () => (a.style.background = 'rgba(255,255,255,0.12)');
-      a.onmouseleave = () => (a.style.background = 'rgba(255,255,255,0.05)');
+      a.onmouseenter = () => (a.style.background = '#5a6575');
+      a.onmouseleave = () => (a.style.background = '#4b5563');
       return a;
     };
 

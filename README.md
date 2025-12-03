@@ -328,4 +328,4 @@ MIT License - See LICENSE file for details
 
 For issues, questions, or feature requests, please open an issue on GitHub.
 
-For privacy or security inquiries, or if you need data removed, contact: abc@gmail.com
+For privacy or security inquiries, or if you need data removed, contact: help.retrorate@gmail.com

@@ -39,7 +39,7 @@ function App() {
           <span className="mx-1">•</span>
           <a href="terms.html" target="_blank" rel="noopener noreferrer" className="mx-2 hover:underline">Terms</a>
           <span className="mx-1">•</span>
-          <a href="mailto:abc@gmail.com" className="mx-2 hover:underline">Contact</a>
+          <a href="mailto:help.retrorate@gmail.com" className="mx-2 hover:underline">Contact</a>
         </div>
       </footer>
 

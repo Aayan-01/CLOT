@@ -86,6 +86,18 @@ router.post('/analyze', uploadMiddleware, async (req, res) => {
     console.log('🖼️  Processing images...');
     const thumbnails = await processImages(localPaths);
 
+    // Copy thumbnails to server's uploads directory so they can be served
+    const uploadsDir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+    
+    const copiedThumbnails: string[] = [];
+    for (const thumb of thumbnails) {
+      const destPath = path.join(uploadsDir, path.basename(thumb));
+      fs.copyFileSync(thumb, destPath);
+      copiedThumbnails.push(destPath);
+    }
+    const finalThumbnails = copiedThumbnails;
+
     // Step 2: Analyze images with Gemini Pro Vision using Master Prompt
     console.log('🔍 Analyzing images with Gemini Pro Vision (Master Prompt)...');
     const visionResults = await analyzeImages(localPaths);
@@ -282,7 +294,7 @@ router.post('/analyze', uploadMiddleware, async (req, res) => {
       }
 
       // Upload thumbnails
-      for (const t of thumbnails) {
+      for (const t of finalThumbnails) {
         const destT = `uploads/thumbnails/${path.basename(t)}`;
         const r2 = await gcs.uploadFileToGCS(t, destT).catch((e) => { throw e; });
         uploadedThumbs.push(r2);
@@ -297,13 +309,15 @@ router.post('/analyze', uploadMiddleware, async (req, res) => {
     for (const p of [...localPaths, ...thumbnails]) {
       try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (e) { /* no-op */ }
     }
+    
+    // finalThumbnails are kept in uploads directory for serving in dev mode
 
     // If uploads to GCS were successful, update analysis.thumbnails to use public URLs
     if (uploadedThumbs.length > 0) {
       analysis.thumbnails = uploadedThumbs.map(t => t.publicUrl);
     } else {
       // fallback: keep local thumbnails URL using existing helper (may be /uploads in dev)
-      analysis.thumbnails = thumbnails.map(t => createThumbnailUrl(req, t));
+      analysis.thumbnails = finalThumbnails.map(t => createThumbnailUrl(req, t));
     }
 
     // Save session to session store (still uses local in-memory store by default)
