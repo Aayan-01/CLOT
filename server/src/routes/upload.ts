@@ -289,7 +289,8 @@ router.post('/analyze', uploadMiddleware, async (req, res) => {
       }
     } catch (gcsErr) {
       const gcsErrMsg = gcsErr instanceof Error ? gcsErr.message : String(gcsErr);
-      console.warn('GCS upload failed, continuing — check configuration', gcsErrMsg);
+      console.warn('⚠️ GCS upload failed, continuing without cloud storage. Error:', gcsErrMsg);
+      console.warn('ℹ️ To fix: ensure GCS_BUCKET_NAME env var points to an existing bucket and service account has permissions.');
     }
 
     // Remove temporary files (best-effort)

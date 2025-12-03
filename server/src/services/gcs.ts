@@ -13,19 +13,28 @@ const storage = new Storage();
 const bucket = bucketName ? storage.bucket(bucketName) : null;
 
 export async function uploadFileToGCS(localPath: string, destPath?: string): Promise<{ publicUrl: string; objectName: string }>{
-  if (!bucket) throw new Error('GCS bucket not configured');
+  if (!bucket) {
+    throw new Error(`GCS bucket not configured. Set GCS_BUCKET_NAME environment variable (currently: "${bucketName || 'empty'}")`);
+  }
 
   // Verify the bucket exists and is accessible. If it doesn't, surface a clear error
   // so calling code can continue with fallback behavior.
   try {
     const [exists] = await bucket.exists();
     if (!exists) {
-      throw new Error(`GCS bucket does not exist: ${bucketName}`);
+      throw new Error(
+        `GCS bucket "${bucketName}" does not exist. Create it in Cloud Storage or set GCS_BUCKET_NAME to an existing bucket.`
+      );
     }
   } catch (err: any) {
-    // If the check fails, include the underlying message.
     const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`GCS check failed for bucket ${bucketName}: ${msg}`);
+    // Check if it's a permissions issue vs bucket not existing
+    if (err?.code === 403 || msg.includes('Permission denied')) {
+      throw new Error(
+        `GCS permission denied for bucket "${bucketName}". Ensure the service account has storage.buckets.get permission.`
+      );
+    }
+    throw new Error(`GCS check failed for bucket "${bucketName}": ${msg}`);
   }
 
   const filename = destPath || path.basename(localPath);
@@ -57,15 +66,26 @@ function getContentTypeFromFilename(fname: string) {
 }
 
 export async function uploadBufferToGCS(buffer: Buffer, destPath: string): Promise<{ publicUrl: string; objectName: string }> {
-  if (!bucket) throw new Error('GCS bucket not configured');
+  if (!bucket) {
+    throw new Error(`GCS bucket not configured. Set GCS_BUCKET_NAME environment variable (currently: "${bucketName || 'empty'}")`);
+  }
 
   // Verify bucket exists before attempting save
   try {
     const [exists] = await bucket.exists();
-    if (!exists) throw new Error(`GCS bucket does not exist: ${bucketName}`);
+    if (!exists) {
+      throw new Error(
+        `GCS bucket "${bucketName}" does not exist. Create it in Cloud Storage or set GCS_BUCKET_NAME to an existing bucket.`
+      );
+    }
   } catch (err: any) {
     const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`GCS check failed for bucket ${bucketName}: ${msg}`);
+    if (err?.code === 403 || msg.includes('Permission denied')) {
+      throw new Error(
+        `GCS permission denied for bucket "${bucketName}". Ensure the service account has storage.buckets.get permission.`
+      );
+    }
+    throw new Error(`GCS check failed for bucket "${bucketName}": ${msg}`);
   }
 
   const file = bucket.file(destPath);
