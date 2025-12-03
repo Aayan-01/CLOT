@@ -24,12 +24,12 @@ steps:
   # 3) Sync built static files to GCS
   - name: 'gcr.io/cloud-builders/gsutil'
     id: 'Sync client to GCS'
-    args: ['-m', 'rsync', '-r', 'client/build', 'gs://${_FRONTEND_BUCKET}']
+    args: ['-m', 'rsync', '-r', 'client/dist', 'gs://${_FRONTEND_BUCKET}']
 
   # 4) Build backend Docker image using 'backend' folder as context
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Build backend image'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/backend-image:$SHORT_SHA', 'backend']
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/backend-image:$SHORT_SHA', 'server']
 
   # 5) Push the image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
