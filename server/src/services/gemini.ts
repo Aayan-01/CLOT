@@ -340,21 +340,17 @@ Score guide:
       if (jsonMatch) jsonText = jsonMatch[0];
     }
 
-    if (!jsonText) {
-      throw new Error("Could not parse JSON from AI authenticity response");
-    }
+    const fallbackAuthParsed = {
+      score: 50,
+      verdict: 'QUESTIONABLE',
+      detectedBrand: 'Unknown',
+      confidence: 50,
+      explanation: ['Fallback: AI response could not be parsed into structured JSON. See rawResponse for details.'],
+      redFlags: [],
+      authenticityMarkers: [],
+    };
 
-    let parsed: any;
-    try {
-      parsed = JSON.parse(jsonText);
-    } catch (parseErr) {
-      const cleaned = jsonText
-        .replace(/['']/g, "'")
-        .replace(/[""]/g, '"')
-        .replace(/,\s*([}\]])/g, '$1');
-
-      parsed = JSON.parse(cleaned);
-    }
+    const parsed: any = safeParseAIJson(textResponse, jsonText, fallbackAuthParsed, 'authenticity');
 
     return {
       score: Math.round(parsed.score),
@@ -513,20 +509,18 @@ Rules:
       if (jsonMatch) jsonText = jsonMatch[0];
     }
 
-    if (!jsonText) {
-      throw new Error("Could not parse JSON from AI price response");
-    }
+    const fallbackPriceParsed = {
+      retail_price_inr: 0,
+      retail_price_usd: 0,
+      current_low_inr: 0,
+      current_median_inr: 0,
+      current_high_inr: 0,
+      reasoning: 'Fallback: Could not parse AI price response',
+      confidence: 50,
+      marketInsights: '',
+    };
 
-    let parsed: any;
-    try {
-      parsed = JSON.parse(jsonText);
-    } catch (err) {
-      const cleaned = jsonText
-        .replace(/['']/g, "'")
-        .replace(/[""]/g, '"')
-        .replace(/,\s*([}\]])/g, '$1');
-      parsed = JSON.parse(cleaned);
-    }
+    const parsed: any = safeParseAIJson(textResponse, jsonText, fallbackPriceParsed, 'price');
 
     const INR_TO_USD = 0.012;
 
@@ -654,4 +648,35 @@ function extractLogos(text: string): string[] {
   });
 
   return [...new Set(logos)];
+}
+
+// Safe JSON parsing helper for AI responses. Returns `fallback` when parsing fails.
+function safeParseAIJson(textResponse: string, jsonText: string, fallback: any, label: string = 'ai') {
+  if (!jsonText) {
+    console.warn(`AI ${label} response contained no JSON. Returning fallback.`);
+    console.debug('Full AI response:', textResponse);
+    return fallback;
+  }
+
+  try {
+    return JSON.parse(jsonText);
+  } catch (err) {
+    const cleaned = jsonText
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/\r?\n/g, ' ')
+      .replace(/,\s*([}\]])/g, '$1')
+      .trim();
+
+    try {
+      return JSON.parse(cleaned);
+    } catch (cleanErr) {
+      console.warn(`Failed to parse ${label} JSON after cleaning. Returning fallback.`);
+      console.debug('cleanedText=', cleaned);
+      console.debug('originalJsonText=', jsonText);
+      console.debug('parseErr=', err, 'cleanErr=', cleanErr);
+      console.debug('Full AI response:', textResponse);
+      return fallback;
+    }
+  }
 }
