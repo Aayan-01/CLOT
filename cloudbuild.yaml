@@ -54,7 +54,8 @@ steps:
 
 options:
   substitutionOption: 'ALLOW_LOOSE'  # permit unspecified substitutions at trigger-time
+  logging: CLOUD_LOGGING_ONLY  # required for custom service account
 
 # Notes:
-# - This config assumes the repo contains a 'frontend' folder and a 'backend' folder per your request.
+# - This config assumes the repo contains a 'client' folder and a 'backend' folder per your request.
 # - Keep substitutions set in your Cloud Build trigger for production values.
