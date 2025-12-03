@@ -47,18 +47,20 @@ steps:
   # 6) Deploy to Cloud Run (managed) in the chosen region and allow unauthenticated access
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy to Cloud Run'
+    entrypoint: '/bin/sh'
     args:
-      - 'run'
-      - 'deploy'
-      - '${_CLOUD_RUN_SERVICE}'
-      - '--image'
-      - 'gcr.io/$PROJECT_ID/backend-image:$SHORT_SHA'
-      - '--region'
-      - '${_CLOUD_RUN_REGION}'
-      - '--platform'
-      - 'managed'
-      - '--allow-unauthenticated'
-      - '--quiet'
+      - '-c'
+      - |
+        if [ -n "${_CLOUD_RUN_SERVICE}" ]; then
+          gcloud run deploy "${_CLOUD_RUN_SERVICE}" \
+            --image "gcr.io/$PROJECT_ID/backend-image:$SHORT_SHA" \
+            --region "${_CLOUD_RUN_REGION}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --quiet
+        else
+          echo "SKIPPING: _CLOUD_RUN_SERVICE not set; Cloud Run deploy step skipped"
+        fi
 
 options:
   substitutionOption: 'ALLOW_LOOSE'  # permit unspecified substitutions at trigger-time
