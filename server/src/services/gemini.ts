@@ -383,6 +383,8 @@ export async function estimatePriceWithAI(
   try {
     // Verify configuration
     ensureGeminiKey();
+    console.log(`💰 Starting price estimation for ${imagePaths.length} image(s)...`);
+    
     let analysisText = '';
     if (visionAnalysis) {
       analysisText = visionAnalysis.rawResponse;
@@ -410,6 +412,11 @@ export async function estimatePriceWithAI(
       const imageBuffer = fs.readFileSync(imagePath);
       const base64Image = imageBuffer.toString('base64');
       const mimeType = imagePath.endsWith('.png') ? 'image/png' : 'image/jpeg';
+      const sizeKB = Math.round(imageBuffer.length / 1024);
+      console.log(`  → Image: ${imagePath} (${sizeKB}KB)`);
+      if (sizeKB > 20000) {
+        console.warn(`⚠️  Warning: image is ${sizeKB}KB — may cause timeout`);
+      }
 
       return {
         inline_data: {
@@ -455,6 +462,8 @@ Rules:
 - High = best-case/premium buyer price
 - If authenticity is questionable, significantly reduce prices`;
 
+    console.log(`💰 Calling Gemini Pro Vision for price estimation...`);
+    console.log(`💰 Calling Gemini Pro Vision for price estimation...`);
     const response = await axios.post(
       `${GEMINI_PRO_VISION_ENDPOINT}?key=${GOOGLE_CLOUD_API_KEY}`,
       {
@@ -473,10 +482,11 @@ Rules:
       },
       {
         headers: { "Content-Type": "application/json" },
-        timeout: 60000,
+        timeout: 120000, // Increased from 60s to 120s for large image payloads
       }
     );
 
+    console.log(`✅ Price API response received, parsing...`);
     let textResponse: string = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
     if (!textResponse || textResponse.trim().length === 0) {
@@ -542,7 +552,11 @@ Rules:
       marketInsights: parsed.marketInsights,
     };
   } catch (error: any) {
-    console.error("Gemini Price Estimation error:", error.response?.data || error.message);
+    const detailedError = error.response?.data || error.message;
+    console.error("❌ Gemini Price Estimation error:", JSON.stringify(detailedError, null, 2));
+    if (error.code === 'ECONNABORTED') {
+      throw new Error(`Price estimation timed out — image may be too large or API overloaded`);
+    }
     throw new Error(`Price estimation failed: ${error.message}`);
   }
 }
