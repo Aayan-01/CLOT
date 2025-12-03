@@ -55,7 +55,11 @@ const Chatbot: React.FC<ChatbotProps> = ({ sessionId }) => {
 
   useEffect(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages]);
 
-  const API_ORIGIN = (import.meta as any).env?.VITE_API_ORIGIN ?? ((import.meta as any).env?.DEV ? 'http://localhost:4000' : window.location.origin);
+  // API_ORIGIN: try VITE_API_ORIGIN env first, then localhost in dev, then Cloud Run backend
+  const API_ORIGIN = (import.meta as any).env?.VITE_API_ORIGIN || 
+    ((import.meta as any).env?.DEV 
+      ? 'http://localhost:4000' 
+      : 'https://clot-805145431598.asia-south1.run.app');
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
