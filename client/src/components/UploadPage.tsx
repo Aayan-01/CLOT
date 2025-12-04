@@ -81,12 +81,12 @@ const UploadPage: React.FC<UploadPageProps> = ({ onAnalysisComplete }) => {
    *  HANDLE SUBMIT
    * ------------------------------ */
   const handleSubmit = async () => {
-    // Health Check
+    // Health check: try quickly, but don't fail the entire flow on transient/cold-start errors.
     try {
-      await axios.get(`${API_ORIGIN}/api/health`, { timeout: 2000 });
-    } catch {
-      setError(`Backend server unreachable at ${API_ORIGIN} — please verify your deployment or start the server locally: \`cd server && npm run dev\``);
-      return;
+      await axios.get(`${API_ORIGIN}/api/health`, { timeout: 5000 });
+    } catch (e) {
+      // Cloud Run or AI backend can cold-start; log and continue to attempt the analyze request.
+      console.warn('Health check failed (continuing to POST /api/analyze):', e instanceof Error ? e.message : e);
     }
 
     if (files.length === 0) {
